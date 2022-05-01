@@ -117,10 +117,15 @@ docker run -d --name zookeeper-server \
 docker run -d --name kafka-server \
     --network my-network \
     -e ALLOW_PLAINTEXT_LISTENER=yes \
+    -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.50.23:9092 \
+    -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 \
     -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181 \
     -p 9092:9092 \
     bitnami/kafka:3.1.0
 ```
+
+> -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.50.23:9092 在docker中运行，这个参数必填docker宿主机的ip地址，
+> 否则客户端连发送消息会报错  dial tcp: lookup 4ac9cc32e26d: no such host
 
 测试kafka客户端
 ```shell
@@ -128,6 +133,14 @@ docker run -it --rm \
     --network my-network \
     -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181 \
     bitnami/kafka:3.1.0 kafka-topics.sh --list  --bootstrap-server kafka-server:9092
+```
+
+创建一个topic
+```shell
+docker run -it --rm \
+    --network my-network \
+    -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181 \
+    bitnami/kafka:3.1.0 kafka-topics.sh --create --topic test-topic --replication-factor 1 --partitions 1  --bootstrap-server kafka-server:9092
 ```
 
 通过docker ps 查询运行的容器，发现kafka已经成功运行

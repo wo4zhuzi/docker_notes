@@ -39,10 +39,13 @@ example:
 以kafka为例
 
 ##### 搜索镜像
+
 ```shell
 docker search kafka
 ```
+
 返回结果
+
 ```text
 NAME                                      DESCRIPTION                                     STARS               OFFICIAL            AUTOMATED
 bitnami/kafka                             Apache Kafka is a distributed streaming plat…   441                                     [OK]
@@ -54,15 +57,19 @@ ibmcom/kafka                              Docker Image for IBM Cloud Private-CE 
 从返回结果可以看出没有官方镜像，官方镜像的 OFFICIAL为[OK]，没有官方镜像就使用点赞最多的bitnami/kafka为例
 
 ##### 拉取最新版本
+
 ```shell
 docker pull bitnami/kafka
 ```
+
 等同于
+
 ```shell
 docker pull bitnami/kafka:latest
 ```
 
 返回结果
+
 ```shell
 REPOSITORY            TAG                 IMAGE ID            CREATED             SIZE
 bitnami/kafka         latest              191c4920968e        13 hours ago        618MB
@@ -72,6 +79,7 @@ mongo                 latest              a0e2e64ac939        2 years ago       
 ```
 
 ##### 拉取指定版本
+
 ```shell
 docker pull bitnami/kafka:3.1.0
 ```
@@ -86,6 +94,7 @@ mongo                 latest              a0e2e64ac939        2 years ago       
 ```
 
 #### 删除镜像
+
 ```shell
 docker rmi [OPTIONS] IMAGE [IMAGE...]
 ```
@@ -93,18 +102,21 @@ docker rmi [OPTIONS] IMAGE [IMAGE...]
 ```shell
 docker rmi bitnami/kafka:latest 
 ```
+
 或
+
 ```shell
 docker rmi 191c4920968e
 ```
 
 ### 容器命令
+
 ```shell
 docker run [OPTIONS] IMAGE[:TAG|@DIGEST] [COMMAND] [ARG...]
 ```
 
-未拉去镜像，直接运行
-以zookeeper为例:
+未拉去镜像，直接运行 以zookeeper为例:
+
 ```shell
 docker run -d --name zookeeper-server \
     --network my-network \
@@ -113,6 +125,7 @@ docker run -d --name zookeeper-server \
 ```
 
 运行kafka:
+
 ```shell
 docker run -d --name kafka-server \
     --network my-network \
@@ -125,9 +138,10 @@ docker run -d --name kafka-server \
 ```
 
 > -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.50.23:9092 在docker中运行，这个参数必填docker宿主机的ip地址，
-> 否则客户端连发送消息会报错  dial tcp: lookup 4ac9cc32e26d: no such host
+> 否则客户端连发送消息会报错 dial tcp: lookup 4ac9cc32e26d: no such host
 
 测试kafka客户端
+
 ```shell
 docker run -it --rm \
     --network my-network \
@@ -136,6 +150,7 @@ docker run -it --rm \
 ```
 
 创建一个topic
+
 ```shell
 docker run -it --rm \
     --network my-network \
@@ -144,6 +159,7 @@ docker run -it --rm \
 ```
 
 通过docker ps 查询运行的容器，发现kafka已经成功运行
+
 ```text
 CONTAINER ID        IMAGE                      COMMAND                  CREATED             STATUS              PORTS                                    NAMES
 193d84fff515        bitnami/kafka:3.1.0        "/opt/bitnami/script…"   3 minutes ago       Up 3 minutes        0.0.0.0:9092->9092/tcp                   kafka-server
@@ -159,11 +175,13 @@ e64f0cd77157        portainer/portainer        "/portainer"             17 month
 > 所以可以自定一个网络，那么在自定义的网络中可以通过 [容器名称:端口]进行通信。
 
 #### 查看当前网络
+
 ```shell
 docker network ls
 ```
 
 返回结果
+
 ```text
 NETWORK ID          NAME                DRIVER              SCOPE
 3445a5b558e8        bridge              bridge              local
@@ -175,4 +193,23 @@ NETWORK ID          NAME                DRIVER              SCOPE
 
 ```shell
 docker network create my-network --driver bridge
+```
+
+
+
+### docker-compose
+
+下载地址
+[https://github.com/docker/compose/releases](https://github.com/docker/compose/releases)
+
+下载
+```shell
+wget https://github.com/docker/compose/releases/download/v2.5.1/docker-compose-linux-x86_64
+```
+
+加入到环境变量
+```shell
+mv docker-compose-linux-x86_64 /usr/bin/docker-compose
+
+chmod +x /usr/bin/docker-compose
 ```

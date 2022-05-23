@@ -5,6 +5,7 @@ services:
     container_name: jenkins                     # 容器名为'jenkins'
     volumes: # 数据卷挂载路径设置,将本机目录映射到容器目录 (下面映射可在容器中执行宿主机docker命令)
       - "./data:/var/jenkins_home"
+    restart: always
     ports: # 映射端口
       - "8080:8080"
       - "50000:50000"

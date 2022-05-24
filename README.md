@@ -195,6 +195,18 @@ NETWORK ID          NAME                DRIVER              SCOPE
 docker network create my-network --driver bridge
 ```
 
+#### docker-compose 中的网络
+1.没有自定义网络名
+实际使用网络是：<当前路径名_default>，如果<当前路径名>太长，会截取前缀部分。
+
+2.自定义后缀
+
+```text
+networks
+   - lnmp
+```
+
+定义网络名为lnmp，那么最终生产的网络名为：<当前路径名_lnmp>。
 
 
 ### docker-compose

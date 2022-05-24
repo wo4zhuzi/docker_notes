@@ -1,0 +1,22 @@
+version: "3"
+# 管理的服务
+services:
+  redis:
+    image: redis:6.0
+    container_name: redis60
+    ports:
+      # 端口映射
+      - 6379:6379
+    volumes:
+      # 持久化 目录映射
+      - "./redis.conf:/usr/local/etc/redis/redis.conf"
+      - "./data:/data"
+    restart: always
+    command:
+      # 执行的命令
+      redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - lnmp_lnmp
+networks:
+  lnmp_lnmp:
+    external: true

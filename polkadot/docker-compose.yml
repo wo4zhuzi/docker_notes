@@ -1,0 +1,22 @@
+version: '3'
+services:
+  polkadot:
+    container_name: polkadot
+    image: parity/polkadot:v0.9.22
+    ports:
+      - "30333:30333" # p2p port
+      - "9887:9887" # rpc port
+      - "9944:9944" # ws port
+    volumes:
+      - /root/blockchain/dot_path:/polkadot/data
+    restart: always
+    command: [
+        "--chain", "polkadot",
+        "--rpc-port", "9887",
+        "--pruning", "archive",
+        "--rpc-cors", "all",
+        "--unsafe-ws-external",
+        "--ws-external",
+        "--rpc-external",
+        "--base-path", "/polkadot/data"
+    ]

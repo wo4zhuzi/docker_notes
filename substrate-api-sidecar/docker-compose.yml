@@ -1,0 +1,17 @@
+version: '3'
+services:
+  substrate-api-sidecar:
+    container_name: substrate-api-sidecar
+    image: parity/substrate-api-sidecar:v12.0.0
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      SAS_EXPRESS_BIND_HOST: "0.0.0.0"
+      SAS_SUBSTRATE_WS_URL: "ws://polkadot:9944"
+    networks:
+      - polkadot_default
+    read_only: true
+networks:
+  polkadot_default:
+    external: true

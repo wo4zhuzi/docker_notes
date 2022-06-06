@@ -1,0 +1,24 @@
+version: '3'
+services:
+  master:
+    image: offchainlabs/arb-node:v1.4.1-h9180527
+    container_name: arbitrum
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100M"
+        max-file: "2"
+    restart: always
+    ports:
+      - 9642:9642
+      - 8547:8547
+      - 8548:8548
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    volumes:
+      - /data/arbitrum-mainnet/:/home/user/.arbitrum/mainnet
+    command: [
+        "--l1.url", "https://l1-node:8545" #备注:l1.url 是eth节点
+    ]

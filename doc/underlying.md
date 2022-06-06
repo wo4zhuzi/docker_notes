@@ -335,3 +335,143 @@ ubuntu@VM-0-17-ubuntu:/data$ pstree -pl | grep pid
 
 在进行pid namespace隔离的程序中，pid为1，而从宿主机中查询sh的pid为10196, 所以说宿主机中10196的pid，映射到 做了pid namespace的程序中是 1，实现了pid的隔离。
 
+### MOUNT Namespace
+
+Mount Namespace 是用来隔离各个进程看到的挂载点视图。在不同Namespace的进程中，看到文件系统层次是 不一样的。在Mount Namespace中调用mount()和 unmount()
+仅仅只会影响当前Namespace内的文件系统，而 对全局的文件系统是没有影响的。
+
+编写代码， 刚才的pid代码的基础上，加上mount隔离
+
+```go
+package main
+
+import (
+	"log"
+	"os"
+	"os/exec"
+	"syscall"
+)
+
+func main() {
+	cmd := exec.Command("sh")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
+	}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+运行mount namespace程序，并在子进程中执行mount操作
+
+```text
+root@VM-0-17-ubuntu:/data/build# ./mount 
+# mount -t proc proc /proc
+# ls /proc
+1          cgroups   devices      fb           ioports   key-users    loadavg  modules       partitions   slabinfo  sysrq-trigger  uptime             zoneinfo
+3          cmdline   diskstats    filesystems  irq       kmsg         locks    mounts        sched_debug  softirqs  sysvipc        version
+acpi       consoles  dma          fs           kallsyms  kpagecgroup  mdstat   mtrr          schedstat    stat      thread-self    version_signature
+buddyinfo  cpuinfo   driver       interrupts   kcore     kpagecount   meminfo  net           scsi         swaps     timer_list     vmallocinfo
+bus        crypto    execdomains  iomem        keys      kpageflags   misc     pagetypeinfo  self         sys       tty            vmstat
+# ps -ef 
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 21:48 pts/10   00:00:00 sh
+root         4     1  0 21:49 pts/10   00:00:00 ps -ef
+```
+
+由此可以看出，子进程中的mount已经起作用了，但是真的起到了mount隔离的作用了吗？
+
+回到宿主机页面执行如下命令
+
+```text
+root@VM-0-17-ubuntu:/data/build# ps -ef
+Error, do this: mount -t proc proc /proc
+root@VM-0-17-ubuntu:/data/build# ls /proc/
+ls: cannot read symbolic link '/proc/self': No such file or directory
+ls: cannot read symbolic link '/proc/thread-self': No such file or directory
+1          cmdline   diskstats    filesystems  irq        kmsg         locks    mounts        sched_debug  softirqs       sysvipc      version
+acpi       consoles  dma          fs           kallsyms   kpagecgroup  mdstat   mtrr          schedstat    stat           thread-self  version_signature
+buddyinfo  cpuinfo   driver       interrupts   kcore      kpagecount   meminfo  net           scsi         swaps          timer_list   vmallocinfo
+bus        crypto    execdomains  iomem        keys       kpageflags   misc     pagetypeinfo  self         sys            tty          vmstat
+cgroups    devices   fb           ioports      key-users  loadavg      modules  partitions    slabinfo     sysrq-trigger  uptime       zoneinfo
+```
+
+宿主机的/proc目录和子进程中的一致了，所以mount并没有起到隔离作用。
+
+运行uts namespace程序，并查询/proc/self/ns/mnt
+
+```text
+root@VM-0-17-ubuntu:/data/build# ./uts 
+# ls -l /proc/self/ns/mnt
+lrwxrwxrwx 1 root root 0 Jun  5 22:30 /proc/self/ns/mnt -> 'mnt:[4026531840]'
+```
+
+运行mount namespace程序，并查询/proc/self/ns/mnt
+
+```text
+root@VM-0-17-ubuntu:/data/build# ./mount 
+# ls -l /proc/self/ns/mnt
+lrwxrwxrwx 1 root root 0 Jun  5 22:32 /proc/self/ns/mnt -> 'mnt:[4026532954]'
+```
+
+查询宿主机/proc/self/ns/mnt
+
+```text
+root@VM-0-17-ubuntu:/data/build# ls -l /proc/self/ns/mnt
+lrwxrwxrwx 1 root root 0 Jun  5 22:33 /proc/self/ns/mnt -> 'mnt:[4026531840]'
+```
+
+从结果可以看出宿主机和uts程序在相同的ns中，mount namespace中程序和宿主机在不同的ns中，宿主机和uts程序在相同的ns中但是却没有起到隔离效果，导致这样的原因是shared subtree
+
+如何实现隔离
+
+进入子进程，递归根目录把共享方式设置为private
+
+```text
+root@VM-0-17-ubuntu:/data/build# ./mount 
+# mount  --make-rprivate  /
+# mount -t proc proc /proc
+# ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 22:56 pts/0    00:00:00 sh
+root         4     1  0 22:57 pts/0    00:00:00 ps -ef
+```
+
+查看宿主机
+
+```text
+root@VM-0-17-ubuntu:/data/build# ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 May27 ?        00:10:48 /sbin/init
+root         2     0  0 May27 ?        00:00:00 [kthreadd]
+root         4     2  0 May27 ?        00:00:00 [kworker/0:0H]
+root         6     2  0 May27 ?        00:00:00 [mm_percpu_wq]
+root         7     2  0 May27 ?        00:00:36 [ksoftirqd/0]
+root         8     2  0 May27 ?        00:07:09 [rcu_sched]
+root         9     2  0 May27 ?        00:00:00 [rcu_bh]
+root        10     2  0 May27 ?        00:00:02 [migration/0]
+root        11     2  0 May27 ?        00:00:01 [watchdog/0]
+root        12     2  0 May27 ?        00:00:00 [cpuhp/0]
+root        13     2  0 May27 ?        00:00:00 [cpuhp/1]
+root        14     2  0 May27 ?        00:00:01 [watchdog/1]
+root        15     2  0 May27 ?        00:00:02 [migration/1]
+root        16     2  0 May27 ?        00:00:34 [ksoftirqd/1]
+root        18     2  0 May27 ?        00:00:00 [kworker/1:0H]
+root        19     2  0 May27 ?        00:00:00 [kdevtmpfs]
+root        20     2  0 May27 ?        00:00:00 [netns]
+root        21     2  0 May27 ?        00:00:00 [rcu_tasks_kthre]
+root        22     2  0 May27 ?        00:00:00 [kauditd]
+root        25     2  0 May27 ?        00:00:00 [khungtaskd]
+root        26     2  0 May27 ?        00:00:00 [oom_reaper]
+root        27     2  0 May27 ?        00:00:00 [writeback]
+root        28     2  0 May27 ?        00:00:00 [kcompactd0]
+```
+
+**得出结论**
+
+需要设置子进程中的挂载点的共享方式设置为私有，才能达到父子进程相互不影响

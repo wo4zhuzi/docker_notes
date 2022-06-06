@@ -1,0 +1,23 @@
+version: '3'
+services:
+  mongo:
+    container_name: mongo
+    image: mongo:4.2.19 # mongo版本
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - /etc/localtime:/etc/localtime # 时区
+      - /data/mongodata/db:/data/db # 挂载数据目录
+      - /data/mongodata/logs:/var/log/mongodb  # 挂载日志目录
+      - /data/mongodata/config:/etc/mongo  # 挂载配置目录
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+    environment:
+      TZ: Asia/Shanghai
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+    command: [ --auth ] #开启mongo验证

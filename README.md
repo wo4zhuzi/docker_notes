@@ -196,8 +196,8 @@ docker network create my-network --driver bridge
 ```
 
 #### docker-compose 中的网络
-1.没有自定义网络名
-实际使用网络是：<当前路径名_default>，如果<当前路径名>太长，会截取前缀部分。
+
+1.没有自定义网络名 实际使用网络是：<当前路径名_default>，如果<当前路径名>太长，会截取前缀部分。
 
 2.自定义后缀
 
@@ -208,6 +208,66 @@ networks
 
 定义网络名为lnmp，那么最终生产的网络名为：<当前路径名_lnmp>。
 
+#### 修改默认网段
+
+查询当前网络
+
+```shell
+ifconfig
+```
+
+返回
+
+```shell
+br-45c33e022655: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.1  netmask 255.255.0.0  broadcast 172.17.255.255
+        inet6 fe80::42:6ff:fea5:9c15  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:06:a5:9c:15  txqueuelen 0  (Ethernet)
+        RX packets 53333  bytes 25616397 (25.6 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 36677  bytes 7122938 (7.1 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+        ...
+```
+
+关闭docker，找到br网段为 172.17 的网桥删除、同时删除默认的docker0
+
+```shell
+service docker stop 
+
+sudo ip link set dev docker0 down
+sudo ip link set dev br-45c33e022655 down
+
+apt install bridge-utils
+
+sudo brctl delbr docker0
+sudo brctl delbr br-45c33e022655
+```
+
+修改配置文件
+
+```shell
+vim /etc/docker/daemon.json
+
+{
+  "bip": "192.161.20.1/24"
+}
+```
+
+打开重启docker service docker start
+
+重启后docker0的网段变了，但是发觉br-45c33e022655的桥网段又变回来了， 针对这种情况，可以先把占用指定网段的network删除，重新创建即可
+
+```shell
+docker network ls
+
+docker network inspect [:网络名称]
+
+docker network rm [:网络名称]
+
+//解除绑定
+docker network disconnect  [:网络名称]  [:容器名称]
+```
 
 ### docker-compose
 
@@ -215,11 +275,13 @@ networks
 [https://github.com/docker/compose/releases](https://github.com/docker/compose/releases)
 
 下载
+
 ```shell
 wget https://github.com/docker/compose/releases/download/v2.5.1/docker-compose-linux-x86_64
 ```
 
 加入到环境变量
+
 ```shell
 mv docker-compose-linux-x86_64 /usr/bin/docker-compose
 

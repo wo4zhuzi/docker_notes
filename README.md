@@ -254,7 +254,8 @@ vim /etc/docker/daemon.json
 }
 ```
 
-打开重启docker service docker start
+重载配置 systemctl daemon-reload
+重启docker docker service docker start
 
 重启后docker0的网段变了，但是发觉br-45c33e022655的桥网段又变回来了， 针对这种情况，可以先把占用指定网段的network删除，重新创建即可
 
